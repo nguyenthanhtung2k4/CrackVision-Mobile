@@ -56,7 +56,9 @@ class AuthRepository:
         self.db.commit()
 
     def is_token_valid(self, token: RefreshToken) -> bool:
-        return (
-            not token.is_revoked
-            and token.expires_at > datetime.now(timezone.utc)
-        )
+        now = datetime.now(timezone.utc)
+        expires = token.expires_at
+        # SQLite trả naive datetime — normalize về UTC để so sánh
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        return not token.is_revoked and expires > now

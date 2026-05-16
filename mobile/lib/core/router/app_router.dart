@@ -4,9 +4,15 @@ import 'package:go_router/go_router.dart';
 import 'package:crackvision/features/auth/presentation/auth_provider.dart';
 import 'package:crackvision/features/auth/presentation/login_screen.dart';
 import 'package:crackvision/features/auth/presentation/register_screen.dart';
-
-// Screens — sẽ tạo ở Ngày 4 & 5
-// import 'package:crackvision/features/home/presentation/home_screen.dart';
+import 'package:crackvision/features/home/presentation/home_screen.dart';
+import 'package:crackvision/features/scanner/presentation/scanner_screen.dart';
+import 'package:crackvision/features/result/presentation/result_screen.dart';
+import 'package:crackvision/features/history/presentation/history_screen.dart';
+import 'package:crackvision/features/history/presentation/history_detail_screen.dart';
+import 'package:crackvision/features/settings/presentation/settings_screen.dart';
+import 'package:crackvision/features/scanner/domain/scan_result_model.dart';
+import 'package:crackvision/core/theme/app_theme.dart';
+import 'package:crackvision/shared/widgets/main_shell.dart';
 
 class AppRoutes {
   static const login = '/login';
@@ -26,18 +32,14 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final authState = ref.read(authProvider);
       final status = authState.status;
-      final isLoginRoute = state.matchedLocation == AppRoutes.login ||
-          state.matchedLocation == AppRoutes.register;
+      final loc = state.matchedLocation;
+      final isAuthRoute = loc == AppRoutes.login || loc == AppRoutes.register;
 
-      // Đang check auth lần đầu → không redirect
-      if (status == AuthStatus.initial || status == AuthStatus.loading) {
-        return null;
-      }
+      if (status == AuthStatus.initial || status == AuthStatus.loading) return null;
 
       final isAuth = status == AuthStatus.authenticated;
-
-      if (!isAuth && !isLoginRoute) return AppRoutes.login;
-      if (isAuth && isLoginRoute) return AppRoutes.home;
+      if (!isAuth && !isAuthRoute) return AppRoutes.login;
+      if (isAuth && isAuthRoute) return AppRoutes.home;
       return null;
     },
     routes: [
@@ -50,61 +52,62 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const RegisterScreen(),
       ),
       GoRoute(
-        path: AppRoutes.home,
-        builder: (context, state) => const _HomePlaceholder(),
-      ),
-      GoRoute(
         path: AppRoutes.scanner,
-        builder: (context, state) =>
-            const Scaffold(body: Center(child: Text('Scanner — Ngày 4'))),
+        builder: (context, state) => const ScannerScreen(),
       ),
       GoRoute(
-        path: AppRoutes.history,
-        builder: (context, state) =>
-            const Scaffold(body: Center(child: Text('History — Ngày 5'))),
+        path: AppRoutes.result,
+        builder: (context, state) {
+          final result = state.extra as ScanResultModel?;
+          if (result == null) return const _ErrorScreen(message: 'Không có kết quả scan.');
+          return ResultScreen(result: result);
+        },
       ),
-      GoRoute(
-        path: AppRoutes.settings,
-        builder: (context, state) =>
-            const Scaffold(body: Center(child: Text('Settings — Ngày 5'))),
+      ShellRoute(
+        builder: (context, state, child) => MainShell(child: child),
+        routes: [
+          GoRoute(
+            path: AppRoutes.home,
+            builder: (context, state) => const HomeScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.history,
+            builder: (context, state) => const HistoryScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.historyDetail,
+            builder: (context, state) {
+              final id = state.pathParameters['id'] ?? '';
+              return HistoryDetailScreen(id: id);
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.settings,
+            builder: (context, state) => const SettingsScreen(),
+          ),
+        ],
       ),
     ],
-    errorBuilder: (context, state) => Scaffold(
-      body: Center(child: Text('Không tìm thấy trang: ${state.uri}')),
-    ),
+    errorBuilder: (context, state) =>
+        _ErrorScreen(message: 'Không tìm thấy trang: ${state.uri}'),
   );
 });
 
-// Cho go_router biết khi authProvider thay đổi → re-evaluate redirect
 class _AuthNotifierListenable extends ChangeNotifier {
   _AuthNotifierListenable(Ref ref) {
     ref.listen(authProvider, (_, __) => notifyListeners());
   }
 }
 
-// Placeholder Home — sẽ thay bằng HomeScreen ở Ngày 5
-class _HomePlaceholder extends ConsumerWidget {
-  const _HomePlaceholder();
+class _ErrorScreen extends StatelessWidget {
+  final String message;
+  const _ErrorScreen({required this.message});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authProvider).user;
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('CrackVision'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(authProvider.notifier).logout(),
-          ),
-        ],
-      ),
       body: Center(
-        child: Text(
-          'Xin chào, ${user?.fullName ?? ''}!\nHome Screen sẽ làm ở Ngày 5.',
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 18),
-        ),
+        child: Text(message, style: const TextStyle(color: AppColors.textMuted)),
       ),
     );
   }
