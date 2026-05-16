@@ -31,7 +31,17 @@ class Settings(BaseSettings):
 
     @property
     def allowed_origins_list(self) -> list[str]:
-        return [origin.strip() for origin in self.allowed_origins.split(",")]
+        origins = [origin.strip() for origin in self.allowed_origins.split(",")]
+        # Dev mode: cho phép tất cả localhost (Flutter Web dùng port ngẫu nhiên)
+        if self.debug:
+            origins.append("http://localhost")
+        return origins
+
+    @property
+    def allow_origin_regex(self) -> str | None:
+        if self.debug:
+            return r"http://localhost(:\d+)?"
+        return None
 
     @property
     def is_sqlite(self) -> bool:

@@ -42,9 +42,11 @@ CrackVision-Mobile/
 
 - [x] Thiết kế hệ thống & database schema
 - [x] Tài liệu API, architecture, roadmap
-- [ ] Backend FastAPI (auth + scan API)
-- [ ] Flutter app (UI + tích hợp API)
-- [ ] TFLite offline mode
+- [x] Backend FastAPI — Auth API (register / login / refresh / logout)
+- [x] TFLite conversion — `crack_model.tflite` (2.41 MB, sai số < 1.3%, label 100% khớp)
+- [x] Flutter project structure — pubspec.yaml, router, Dio client, secure storage
+- [ ] Backend — AI Service + Scan API + History API
+- [ ] Flutter app — UI screens + tích hợp API
 - [ ] Build APK release
 
 ## Tài Liệu
@@ -53,6 +55,17 @@ CrackVision-Mobile/
 - [API Spec](docs/API_SPEC.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Database ERD](database/ERD.md)
+
+## Kết Quả TFLite Conversion
+
+| Chỉ số | Giá trị |
+|--------|---------|
+| Model gốc | `mobilenetv2_crack_final.keras` |
+| TFLite output | `crack_model.tflite` — **2.41 MB** |
+| Avg diff (prob) | `0.0109` (~1.1%) |
+| Max diff (prob) | `0.0126` (~1.3%) |
+| Label mismatch | **0/10** — Positive/Negative 100% khớp |
+| Phương pháp convert | Keras 3 → `tf.function` concrete function → TFLite |
 
 ---
 

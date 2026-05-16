@@ -5,7 +5,7 @@
 
 -- Extension UUID (PostgreSQL only)
 -- SQLite dùng TEXT cho UUID, bỏ dòng này
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================================
 -- TABLE: users

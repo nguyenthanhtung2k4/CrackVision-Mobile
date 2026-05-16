@@ -19,7 +19,7 @@ class AuthService:
     def register(self, email: str, password: str, full_name: str) -> UserResponse:
         if self.repo.get_user_by_email(email):
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=status.HTTP_409_CONFLICT,
                 detail="Email đã được sử dụng",
             )
         user = self.repo.create_user(
