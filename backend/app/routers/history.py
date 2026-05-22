@@ -40,7 +40,9 @@ def get_scan_detail(
     repo = ScanRepository(db)
     scan = repo.get_by_id(scan_id, current_user.id)
     if not scan:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy kết quả scan.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy kết quả scan."
+        )
     return scan
 
 
@@ -54,8 +56,23 @@ def update_note(
     repo = ScanRepository(db)
     scan = repo.get_by_id(scan_id, current_user.id)
     if not scan:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy kết quả scan.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy kết quả scan."
+        )
     return repo.update_note(scan, body.note)
+
+
+@router.delete("", status_code=status.HTTP_204_NO_CONTENT)
+def clear_history(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    repo = ScanRepository(db)
+    scans = repo.get_all_history(current_user.id)
+    for scan in scans:
+        if scan.image_path:
+            delete_image(scan.image_path)
+    repo.delete_many(scans)
 
 
 @router.delete("/{scan_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -67,7 +84,9 @@ def delete_scan(
     repo = ScanRepository(db)
     scan = repo.get_by_id(scan_id, current_user.id)
     if not scan:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy kết quả scan.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy kết quả scan."
+        )
     if scan.image_path:
         delete_image(scan.image_path)
     repo.delete(scan)

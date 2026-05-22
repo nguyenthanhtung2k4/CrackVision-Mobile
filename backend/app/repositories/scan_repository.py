@@ -8,7 +8,13 @@ class ScanRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def create(self, user_id: str, ai_result: dict, image_path: str | None, image_filename: str | None) -> ScanResult:
+    def create(
+        self,
+        user_id: str,
+        ai_result: dict,
+        image_path: str | None,
+        image_filename: str | None,
+    ) -> ScanResult:
         scan = ScanResult(
             user_id=user_id,
             pred_label=ai_result["pred_label"],
@@ -34,7 +40,9 @@ class ScanRepository:
             .first()
         )
 
-    def get_history(self, user_id: str, page: int, page_size: int) -> tuple[list[ScanResult], int]:
+    def get_history(
+        self, user_id: str, page: int, page_size: int
+    ) -> tuple[list[ScanResult], int]:
         query = (
             self.db.query(ScanResult)
             .filter(ScanResult.user_id == user_id)
@@ -44,8 +52,16 @@ class ScanRepository:
         items = query.offset((page - 1) * page_size).limit(page_size).all()
         return items, total
 
+    def get_all_history(self, user_id: str) -> list[ScanResult]:
+        return self.db.query(ScanResult).filter(ScanResult.user_id == user_id).all()
+
     def delete(self, scan: ScanResult) -> None:
         self.db.delete(scan)
+        self.db.commit()
+
+    def delete_many(self, scans: list[ScanResult]) -> None:
+        for scan in scans:
+            self.db.delete(scan)
         self.db.commit()
 
     def update_note(self, scan: ScanResult, note: str) -> ScanResult:

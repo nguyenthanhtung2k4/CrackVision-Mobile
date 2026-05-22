@@ -20,6 +20,18 @@ def _make_image_bytes(fmt: str = "JPEG", mode: str = "RGB", size=(64, 64)) -> by
     return buf.getvalue()
 
 
+def _make_thin_crack_image_bytes() -> bytes:
+    img = Image.new("RGB", (280, 180), color=(194, 190, 182))
+    for y in range(20, 160):
+        x = 138 + int(np.sin(y / 11) * 3)
+        img.putpixel((x, y), (95, 92, 88))
+        if y % 9 == 0:
+            img.putpixel((x + 1, y), (120, 116, 110))
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=92)
+    return buf.getvalue()
+
+
 @pytest.fixture
 def service():
     """Trả về instance AIService mới, reset _model về None."""
@@ -49,8 +61,9 @@ class TestLoadModel:
 
     def test_mock_mode_when_file_missing(self, service, tmp_path):
         """Ghi warning + giữ _model = None khi file không tồn tại."""
-        with patch("app.services.ai_service.settings") as mock_cfg:
-            mock_cfg.model_path = str(tmp_path / "nonexistent.keras")
+        with patch("app.services.ai_service._REPO_ROOT", tmp_path), \
+             patch("app.services.ai_service.settings") as mock_cfg:
+            mock_cfg.model_path = "nonexistent.keras"
             service.load_model()
         assert service._model is None
 
@@ -73,10 +86,11 @@ class TestPreprocess:
         arr = service._preprocess(_make_image_bytes("JPEG"))
         assert arr.dtype == np.float32
 
-    def test_normalized_range(self, service):
+    def test_raw_pixel_range_for_model_rescaling_layer(self, service):
         arr = service._preprocess(_make_image_bytes("JPEG"))
         assert arr.min() >= 0.0
-        assert arr.max() <= 1.0
+        assert arr.max() <= 255.0
+        assert arr.max() > 1.0
 
     def test_accepts_png(self, service):
         arr = service._preprocess(_make_image_bytes("PNG"))
@@ -112,7 +126,7 @@ class TestPredict:
     def test_positive_result(self, service_with_mock_model):
         """prob_positive=0.85 >= threshold 0.5 → CRACK."""
         result = service_with_mock_model.predict(_make_image_bytes())
-        assert result["pred_label"] == "Positive"
+        assert result["pred_label"] == "CRACK"
         assert result["meaning"] == "Có vết nứt"
         assert result["prob_positive"] == pytest.approx(0.85, abs=1e-4)
         assert result["confidence"] == pytest.approx(0.85, abs=1e-4)
@@ -127,9 +141,20 @@ class TestPredict:
         service._model = mock_model
 
         result = service.predict(_make_image_bytes())
-        assert result["pred_label"] == "Negative"
+        assert result["pred_label"] == "NO_CRACK"
         assert result["meaning"] == "Không có vết nứt"
         assert result["confidence"] == pytest.approx(0.8, abs=1e-4)
+
+    def test_vision_fallback_catches_thin_crack(self, service):
+        mock_model = MagicMock()
+        mock_model.predict.return_value = np.array([[0.002]])
+        service._model = mock_model
+
+        result = service.predict(_make_thin_crack_image_bytes())
+
+        assert result["pred_label"] == "CRACK"
+        assert result["prob_positive"] >= 0.5
+        assert result["source"] == "server+vision"
 
     def test_boundary_exactly_at_threshold(self, service):
         """prob = 0.5 đúng bằng threshold → Positive."""
@@ -139,7 +164,7 @@ class TestPredict:
         with patch("app.services.ai_service.settings") as mock_cfg:
             mock_cfg.model_threshold = 0.5
             result = service.predict(_make_image_bytes())
-        assert result["pred_label"] == "Positive"
+        assert result["pred_label"] == "CRACK"
 
     def test_result_has_all_required_keys(self, service_with_mock_model):
         result = service_with_mock_model.predict(_make_image_bytes())

@@ -12,10 +12,12 @@ class ScanResultResponse(BaseModel):
     threshold: float
     inference_time_seconds: Optional[float]
     image_filename: Optional[str]
+    image_path: Optional[str] = None
     source: str
     note: Optional[str]
     is_synced: bool
     created_at: datetime
+    texture_warning: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
