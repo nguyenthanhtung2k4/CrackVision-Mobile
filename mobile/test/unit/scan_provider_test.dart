@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
@@ -10,11 +9,12 @@ import 'package:crackvision/features/scanner/presentation/scan_state.dart';
 // ── Minimal upload interface — avoids tflite_flutter compile path ──
 
 abstract class _IUploader {
-  Future<ScanResultModel> uploadAndScan(File file);
+  Future<ScanResultModel> uploadAndScan(XFile file);
 }
 
 class _MockUploader extends Mock implements _IUploader {}
-class _FakeFile extends Fake implements File {}
+
+class _FakeXFile extends Fake implements XFile {}
 
 // Standalone notifier that replicates ScanNotifier logic using _IUploader.
 // Does NOT extend ScanNotifier (avoids ScanRepository / tflite dependency).
@@ -23,7 +23,7 @@ class _FakeScanNotifier extends StateNotifier<ScanState> {
 
   _FakeScanNotifier(this._uploader) : super(const ScanState());
 
-  void selectImage(File image) => state = state.withImage(image);
+  void selectImage(XFile image) => state = state.withImage(image);
   void reset() => state = state.reset();
 
   Future<void> analyze() async {
@@ -68,7 +68,7 @@ void main() {
     createdAt: DateTime(2026, 5, 16),
   );
 
-  setUpAll(() => registerFallbackValue(_FakeFile()));
+  setUpAll(() => registerFallbackValue(_FakeXFile()));
 
   setUp(() {
     mockUploader = _MockUploader();
@@ -97,7 +97,7 @@ void main() {
   // ── selectImage ───────────────────────────────────────────────
 
   test('selectImage sets image and stays idle', () {
-    notifier().selectImage(File('test.jpg'));
+    notifier().selectImage(XFile('test.jpg'));
 
     expect(scanState().status, ScanStatus.idle);
     expect(scanState().selectedImage, isNotNull);
@@ -106,7 +106,7 @@ void main() {
   // ── reset ─────────────────────────────────────────────────────
 
   test('reset clears image and returns idle', () {
-    notifier().selectImage(File('test.jpg'));
+    notifier().selectImage(XFile('test.jpg'));
     notifier().reset();
 
     expect(scanState().status, ScanStatus.idle);
@@ -127,7 +127,7 @@ void main() {
     when(() => mockUploader.uploadAndScan(any()))
         .thenAnswer((_) async => fakeResult);
 
-    notifier().selectImage(File('crack.jpg'));
+    notifier().selectImage(XFile('crack.jpg'));
     await notifier().analyze();
 
     expect(scanState().status, ScanStatus.success);
@@ -141,7 +141,7 @@ void main() {
     when(() => mockUploader.uploadAndScan(any()))
         .thenThrow(const ScanException('Ảnh không hợp lệ.'));
 
-    notifier().selectImage(File('bad.gif'));
+    notifier().selectImage(XFile('bad.gif'));
     await notifier().analyze();
 
     expect(scanState().status, ScanStatus.error);
@@ -155,7 +155,7 @@ void main() {
     when(() => mockUploader.uploadAndScan(any()))
         .thenThrow(Exception('Network down'));
 
-    notifier().selectImage(File('test.jpg'));
+    notifier().selectImage(XFile('test.jpg'));
     await notifier().analyze();
 
     expect(scanState().status, ScanStatus.error);
@@ -167,7 +167,7 @@ void main() {
 
   test('ScanState.withImage resets to idle, clears error', () {
     const s = ScanState(status: ScanStatus.error, error: 'old');
-    final next = s.withImage(File('new.jpg'));
+    final next = s.withImage(XFile('new.jpg'));
 
     expect(next.status, ScanStatus.idle);
     expect(next.error, isNull);
@@ -177,7 +177,7 @@ void main() {
   test('ScanState.reset returns clean idle state', () {
     final s = ScanState(
       status: ScanStatus.success,
-      selectedImage: File('x.jpg'),
+      selectedImage: XFile('x.jpg'),
       result: fakeResult,
     );
     final clean = s.reset();

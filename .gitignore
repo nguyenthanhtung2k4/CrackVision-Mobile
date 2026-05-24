@@ -66,10 +66,10 @@ uploads/
 # AI MODEL
 # ============================================================
 # Model nặng — lưu riêng (Google Drive, HuggingFace, etc.)
-*.keras
+# *.keras
 *.h5
 *.pb
-*.tflite
+# *.tflite
 *.onnx
 *.pt
 *.pth

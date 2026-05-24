@@ -1,11 +1,13 @@
-import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:crackvision/features/scanner/domain/scan_result_model.dart';
+
+export 'package:image_picker/image_picker.dart' show XFile;
 
 enum ScanStatus { idle, loading, success, error }
 
 class ScanState {
   final ScanStatus status;
-  final File? selectedImage;
+  final XFile? selectedImage;
   final ScanResultModel? result;
   final String? error;
 
@@ -18,7 +20,7 @@ class ScanState {
 
   ScanState copyWith({
     ScanStatus? status,
-    File? selectedImage,
+    XFile? selectedImage,
     ScanResultModel? result,
     String? error,
   }) =>
@@ -29,7 +31,7 @@ class ScanState {
         error: error,
       );
 
-  ScanState withImage(File image) =>
+  ScanState withImage(XFile image) =>
       ScanState(status: ScanStatus.idle, selectedImage: image);
 
   ScanState reset() => const ScanState();

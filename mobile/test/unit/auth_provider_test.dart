@@ -22,6 +22,7 @@ void main() {
 
   setUp(() {
     mockRepo = _MockAuthRepository();
+    when(() => mockRepo.getMe()).thenThrow(Exception('No saved session'));
     container = ProviderContainer(
       overrides: [
         authProvider.overrideWith((ref) => AuthNotifier(mockRepo)),
@@ -36,8 +37,10 @@ void main() {
 
   // ── Initial state ─────────────────────────────────────────────
 
-  test('initial state is AuthStatus.initial', () {
-    expect(authState().status, AuthStatus.initial);
+  test('initial auth check settles unauthenticated when no session', () async {
+    await Future<void>.delayed(Duration.zero);
+
+    expect(authState().status, AuthStatus.unauthenticated);
     expect(authState().user, isNull);
     expect(authState().error, isNull);
   });
@@ -45,8 +48,7 @@ void main() {
   // ── login — success ───────────────────────────────────────────
 
   test('login success → authenticated with user', () async {
-    when(() => mockRepo.login(any(), any()))
-        .thenAnswer((_) async => fakeUser);
+    when(() => mockRepo.login(any(), any())).thenAnswer((_) async => fakeUser);
 
     await notifier().login('test@test.com', 'password123');
 
@@ -115,8 +117,7 @@ void main() {
   // ── register — success ────────────────────────────────────────
 
   test('register success → AuthStatus.registered', () async {
-    when(() => mockRepo.register(any(), any(), any()))
-        .thenAnswer((_) async {});
+    when(() => mockRepo.register(any(), any(), any())).thenAnswer((_) async {});
 
     await notifier().register('new@test.com', 'password123', 'New User');
 

@@ -9,6 +9,11 @@ import numpy as np
 
 from app.core.config import settings
 
+# Suppress TF startup noise on Windows CPU-only builds
+import os
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
+os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
+
 logger = logging.getLogger(__name__)
 
 # Absolute path to repo root, regardless of CWD when uvicorn is launched.
@@ -51,14 +56,14 @@ class AIService:
             import keras
             from keras.applications.mobilenet_v2 import preprocess_input
             logger.info(f"Loading crack model: {model_path}")
-            # V2 model uses a Lambda layer wrapping preprocess_input — must
-            # pass custom_objects so Keras 3 can deserialize it correctly.
-            # V1 model (no Lambda) loads fine with custom_objects too.
             self._model = keras.models.load_model(
                 str(model_path),
                 custom_objects={"preprocess_input": preprocess_input},
             )
-            logger.info("Crack model loaded OK")
+            # Warmup: compile computation graph so first real request is fast
+            _dummy = np.zeros((1, 224, 224, 3), dtype=np.float32)
+            self._model(_dummy, training=False)
+            logger.info("Crack model loaded OK (warmup done)")
         except Exception as e:
             logger.error(f"Load crack model thất bại: {e}")
             self._model = None
@@ -69,7 +74,10 @@ class AIService:
                 import keras
                 logger.info(f"Loading texture classifier: {_TEXTURE_MODEL_PATH}")
                 self._texture_model = keras.models.load_model(str(_TEXTURE_MODEL_PATH))
-                logger.info("Texture classifier loaded OK")
+                # Warmup texture model too
+                _dummy = np.zeros((1, 224, 224, 3), dtype=np.float32)
+                self._texture_model(_dummy, training=False)
+                logger.info("Texture classifier loaded OK (warmup done)")
             except Exception as e:
                 logger.warning(f"Load texture classifier thất bại (bỏ qua): {e}")
                 self._texture_model = None
@@ -122,7 +130,7 @@ class AIService:
             return True, 0.0
         try:
             x = self._preprocess_texture(img_bytes)
-            prob_non_concrete = float(self._texture_model.predict(x, verbose=0)[0][0])
+            prob_non_concrete = float(self._texture_model(x, training=False)[0][0])
             is_concrete = prob_non_concrete < _TEXTURE_REJECT_THRESHOLD
             return is_concrete, prob_non_concrete
         except Exception as e:
@@ -246,7 +254,7 @@ class AIService:
 
         # ── Step 2: Crack detection ───────────────────────────────────
         x = self._preprocess(img_bytes)
-        model_prob_positive = float(self._model.predict(x, verbose=0)[0][0])
+        model_prob_positive = float(self._model(x, training=False)[0][0])
         vision_score = self._crack_line_score(img_bytes)
         inference_time = round(time.perf_counter() - t0, 4)
 

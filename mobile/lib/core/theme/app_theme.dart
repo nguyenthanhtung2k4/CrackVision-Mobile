@@ -121,8 +121,62 @@ class AppTheme {
     colorScheme: ColorScheme.fromSeed(
       seedColor: AppColors.primary,
       brightness: Brightness.dark,
-    ).copyWith(primary: AppColors.primary),
+    ).copyWith(
+      primary: AppColors.primary,
+      surface: AppColors.surfaceDark,
+      onSurface: AppColors.textDarkMode,
+      onPrimary: Colors.white,
+    ),
     scaffoldBackgroundColor: AppColors.backgroundDark,
+    cardColor: AppColors.surfaceDark,
+    dividerColor: const Color(0xFF3A3A3A),
     fontFamily: 'Inter',
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Color(0xFF2A2A2A),
+      foregroundColor: AppColors.textDarkMode,
+      elevation: 0,
+      centerTitle: true,
+      titleTextStyle: TextStyle(
+        color: AppColors.textDarkMode,
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: const Color(0xFF333333),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      hintStyle: const TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+    ),
+    textTheme: const TextTheme(
+      bodyLarge: TextStyle(color: AppColors.textDarkMode),
+      bodyMedium: TextStyle(color: AppColors.textDarkMode),
+      bodySmall: TextStyle(color: Color(0xFFD1D5DB)),
+      titleLarge: TextStyle(color: AppColors.textDarkMode, fontWeight: FontWeight.w700),
+      titleMedium: TextStyle(color: AppColors.textDarkMode, fontWeight: FontWeight.w600),
+      titleSmall: TextStyle(color: Color(0xFFD1D5DB)),
+    ),
+    dialogTheme: const DialogThemeData(
+      backgroundColor: Color(0xFF2A2A2A),
+      titleTextStyle: TextStyle(color: AppColors.textDarkMode, fontSize: 16, fontWeight: FontWeight.w700),
+      contentTextStyle: TextStyle(color: Color(0xFF9CA3AF)),
+    ),
   );
 }

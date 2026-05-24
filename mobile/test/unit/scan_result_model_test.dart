@@ -102,7 +102,7 @@ void main() {
         'id': 's3',
         'pred_label': 'CRACK',
         'meaning': 'Có vết nứt',
-        'prob_positive': 1,      // int, not double
+        'prob_positive': 1, // int, not double
         'confidence': 1,
         'threshold': 0,
         'inference_time_seconds': null,
@@ -129,12 +129,49 @@ void main() {
       expect(model.hasCrack, false);
     });
 
-    test('hasCrack returns false for Positive label (server format)', () {
+    test('hasCrack returns true for Positive label (server format)', () {
       final model = _makeModel(predLabel: 'Positive');
-      expect(model.hasCrack, false); // only 'CRACK' returns true
+      expect(model.hasCrack, true);
+    });
+
+    test('fromJson normalizes server Positive/Negative labels', () {
+      final positiveJson = {
+        'id': 'server-1',
+        'pred_label': 'Positive',
+        'meaning': 'Có vết nứt',
+        'prob_positive': 0.99,
+        'confidence': 0.99,
+        'threshold': 0.5,
+        'created_at': '2026-05-16T00:00:00.000Z',
+      };
+      final negativeJson = {
+        ...positiveJson,
+        'id': 'server-2',
+        'pred_label': 'Negative',
+        'meaning': 'Không có vết nứt',
+        'prob_positive': 0.01,
+        'confidence': 0.99,
+      };
+
+      expect(ScanResultModel.fromJson(positiveJson).predLabel, 'CRACK');
+      expect(ScanResultModel.fromJson(positiveJson).hasCrack, true);
+      expect(ScanResultModel.fromJson(negativeJson).predLabel, 'NO_CRACK');
+      expect(ScanResultModel.fromJson(negativeJson).hasCrack, false);
     });
 
     // ── DateTime parsing ──────────────────────────────────────────
+
+    test('source labels support vision fallback sources', () {
+      final serverVision = _makeModel(source: 'server+vision');
+      final tfliteVision = _makeModel(source: 'tflite+vision');
+
+      expect(serverVision.isServerSource, true);
+      expect(serverVision.usedVisionFallback, true);
+      expect(serverVision.sourceLabel, 'Server AI + Vision');
+      expect(serverVision.sourceShortLabel, 'Online + Vision');
+      expect(tfliteVision.isServerSource, false);
+      expect(tfliteVision.sourceLabel, 'On-device AI + Vision');
+    });
 
     test('createdAt is parsed as DateTime', () {
       final model = _makeModel();

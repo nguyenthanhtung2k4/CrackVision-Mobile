@@ -11,7 +11,8 @@ class HistoryRepository {
 
   HistoryRepository(this._dio);
 
-  Future<List<ScanResultModel>> getHistory({int page = 1, int pageSize = 20}) async {
+  Future<List<ScanResultModel>> getHistory(
+      {int page = 1, int pageSize = 20}) async {
     try {
       final res = await _dio.get(
         ApiEndpoints.history,
@@ -44,6 +45,12 @@ class HistoryRepository {
     await box.delete(id);
   }
 
+  Future<void> clearHistory() async {
+    await _dio.delete(ApiEndpoints.history);
+    final box = await _openBox();
+    await box.clear();
+  }
+
   Future<void> updateNote(String id, String note) async {
     await _dio.patch(
       '${ApiEndpoints.history}/$id/note',
@@ -54,7 +61,8 @@ class HistoryRepository {
   Future<List<ScanResultModel>> _getCachedHistory() async {
     final box = await _openBox();
     return box.values
-        .map((j) => ScanResultModel.fromJson(Map<String, dynamic>.from(j as Map)))
+        .map((j) =>
+            ScanResultModel.fromJson(Map<String, dynamic>.from(j as Map)))
         .toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }

@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'dart:io' show File;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -55,9 +56,13 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
               _buildHeader(context),
               _buildImageSection(image, r),
               const SizedBox(height: 16),
+              if (r.textureWarning != null) ...[
+                _buildTextureWarningCard(r.textureWarning!),
+                const SizedBox(height: 12),
+              ],
               _buildDetectionCard(r, hasCrack, confidencePct),
               const SizedBox(height: 12),
-              _buildBreakdownCard(r, hasCrack, confidencePct),
+              _buildBreakdownCard(r, hasCrack),
               const SizedBox(height: 12),
               _buildRecommendations(hasCrack),
               const SizedBox(height: 16),
@@ -78,7 +83,8 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
         children: [
           _CircleBtn(
             onTap: () => context.go(AppRoutes.scanner),
-            child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Color(0xFFE8751A)),
+            child: const Icon(Icons.arrow_back_ios_new,
+                size: 18, color: Color(0xFFE8751A)),
           ),
           const Expanded(
             child: Text(
@@ -95,12 +101,14 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
             children: [
               _CircleBtn(
                 onTap: () {},
-                child: const Icon(Icons.share_outlined, size: 16, color: Color(0xFFE8751A)),
+                child: const Icon(Icons.share_outlined,
+                    size: 16, color: Color(0xFFE8751A)),
               ),
               const SizedBox(width: 8),
               _CircleBtn(
                 onTap: () {},
-                child: const Icon(Icons.download_outlined, size: 16, color: Color(0xFFE8751A)),
+                child: const Icon(Icons.download_outlined,
+                    size: 16, color: Color(0xFFE8751A)),
               ),
             ],
           ),
@@ -109,8 +117,12 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
     );
   }
 
-  Widget _buildImageSection(File? image, ScanResultModel r) {
-    final hasCrack = r.hasCrack;
+  Widget _buildImageSection(XFile? image, ScanResultModel r) {
+    final statusColor =
+        r.hasCrack ? const Color(0xFFEF4444) : const Color(0xFF22C55E);
+    final sourceLabel = r.sourceLabel;
+    final confidenceLabel = '${(r.confidence * 100).toStringAsFixed(1)}%';
+    final thresholdLabel = '${(r.threshold * 100).toStringAsFixed(0)}%';
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: ClipRRect(
@@ -121,12 +133,14 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
             fit: StackFit.expand,
             children: [
               image != null
-                  ? Image.file(image, fit: BoxFit.cover)
+                  ? (kIsWeb
+                      ? Image.network(image.path, fit: BoxFit.cover)
+                      : Image.file(File(image.path), fit: BoxFit.cover))
                   : Container(
                       color: const Color(0xFFFFE0C8),
-                      child: const Icon(Icons.image_outlined, size: 64, color: Color(0xFFE8751A)),
+                      child: const Icon(Icons.image_outlined,
+                          size: 64, color: Color(0xFFE8751A)),
                     ),
-              // Gradient overlay
               Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
@@ -137,67 +151,59 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                   ),
                 ),
               ),
-              // Detection box — large crack
-              if (hasCrack) ...[
-                const Positioned(
-                  top: 200 * 0.25,
-                  left: 200 * 0.30,
-                  child: _DetectionBox(
-                    width: 120,
-                    height: 70,
-                    borderColor: Color(0xFFEF4444),
-                    label: 'Vết nứt lớn 94%',
-                    labelBg: Color(0xFFEF4444),
-                  ),
-                ),
-                const Positioned(
-                  top: 200 * 0.55,
-                  left: 200 * 0.55,
-                  child: _DetectionBox(
-                    width: 60,
-                    height: 40,
-                    borderColor: Color(0xFFFFB347),
-                    label: 'Vết nứt nhỏ 72%',
-                    labelBg: Color(0xFFFFB347),
-                  ),
-                ),
-              ],
-              // Bottom overlay
               Positioned(
                 bottom: 0,
                 left: 0,
                 right: 0,
                 child: Padding(
                   padding: const EdgeInsets.all(12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _formatDate(r.createdAt),
-                              style: const TextStyle(color: Color(0xB3FFFFFF), fontSize: 9),
-                            ),
-                            const Text(
-                              'Bề mặt bê tông',
-                              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
+                      Text(
+                        _formatDate(r.createdAt),
+                        style: const TextStyle(
+                            color: Color(0xB3FFFFFF), fontSize: 9),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          r.source == 'server' ? 'Server AI v2.4' : 'On-device AI',
-                          style: const TextStyle(color: Colors.white, fontSize: 9),
-                        ),
+                      const SizedBox(height: 6),
+                      Text(
+                        r.imageFilename ?? 'Ảnh scan',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600),
                       ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          _InfoChip(label: r.meaning, color: statusColor),
+                          _InfoChip(
+                              label: confidenceLabel,
+                              color: const Color(0xFFE8751A)),
+                          _InfoChip(
+                              label: 'Ngưỡng $thresholdLabel',
+                              color: const Color(0xFF6B3A1F)),
+                          _InfoChip(
+                              label: sourceLabel,
+                              color: const Color(0xFF3D1A00)),
+                        ],
+                      ),
+                      if (r.hasCrack) ...[
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Mô hình hiện tại chỉ trả về xác suất phát hiện, chưa có tọa độ vết nứt thật.',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: Color(0xD9FFFFFF),
+                              fontSize: 9,
+                              height: 1.3),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -209,11 +215,45 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
     );
   }
 
-  Widget _buildDetectionCard(ScanResultModel r, bool hasCrack, double confidencePct) {
-    final mainColor = hasCrack ? const Color(0xFFEF4444) : const Color(0xFF22C55E);
+  Widget _buildTextureWarningCard(String warning) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFBEB),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFFCD34D)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.warning_amber_rounded,
+                size: 18, color: Color(0xFFD97706)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                warning,
+                style: const TextStyle(
+                    color: Color(0xFF92400E),
+                    fontSize: 11,
+                    height: 1.4),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetectionCard(
+      ScanResultModel r, bool hasCrack, double confidencePct) {
+    final mainColor =
+        hasCrack ? const Color(0xFFEF4444) : const Color(0xFF22C55E);
     final mainLabel = hasCrack ? 'Phát hiện vết nứt' : 'Không có vết nứt';
     final severity = hasCrack ? 'NGHIÊM TRỌNG' : 'AN TOÀN';
-    final severityBg = hasCrack ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7);
+    final severityBg =
+        hasCrack ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7);
 
     return AnimatedBuilder(
       animation: _animController,
@@ -226,7 +266,10 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
               boxShadow: const [
-                BoxShadow(color: Color(0x1AC85600), blurRadius: 16, offset: Offset(0, 4)),
+                BoxShadow(
+                    color: Color(0x1AC85600),
+                    blurRadius: 16,
+                    offset: Offset(0, 4)),
               ],
             ),
             child: Column(
@@ -245,14 +288,18 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: severityBg,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         severity,
-                        style: TextStyle(color: mainColor, fontSize: 10, fontWeight: FontWeight.w700),
+                        style: TextStyle(
+                            color: mainColor,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700),
                       ),
                     ),
                   ],
@@ -268,7 +315,9 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Icon(
-                        hasCrack ? Icons.warning_rounded : Icons.check_circle_rounded,
+                        hasCrack
+                            ? Icons.warning_rounded
+                            : Icons.check_circle_rounded,
                         size: 26,
                         color: mainColor,
                       ),
@@ -287,7 +336,8 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                         ),
                         const Text(
                           'Vật liệu: Bê tông',
-                          style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12),
+                          style:
+                              TextStyle(color: Color(0xFF9CA3AF), fontSize: 12),
                         ),
                       ],
                     ),
@@ -296,7 +346,8 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    const Icon(Icons.bar_chart, size: 13, color: Color(0xFF9CA3AF)),
+                    const Icon(Icons.bar_chart,
+                        size: 13, color: Color(0xFF9CA3AF)),
                     const SizedBox(width: 6),
                     const Text(
                       'Độ tin cậy',
@@ -305,12 +356,18 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                     const Spacer(),
                     Text(
                       '${confidencePct.toStringAsFixed(1)}%',
-                      style: TextStyle(color: mainColor, fontSize: 15, fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                          color: mainColor,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                _AnimatedBar(value: r.confidence, color: mainColor, animation: _confidenceAnim),
+                _AnimatedBar(
+                    value: r.confidence,
+                    color: mainColor,
+                    animation: _confidenceAnim),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -328,7 +385,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                       child: _StatTile(
                         icon: Icons.memory,
                         label: 'Nguồn AI',
-                        value: r.source == 'server' ? 'Online' : 'On-device',
+                        value: r.sourceShortLabel,
                       ),
                     ),
                   ],
@@ -341,18 +398,13 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
     );
   }
 
-  Widget _buildBreakdownCard(ScanResultModel r, bool hasCrack, double confidencePct) {
-    final breakdownItems = hasCrack
-        ? [
-            _BreakdownItem('Vết nứt lớn', confidencePct, const Color(0xFFEF4444)),
-            _BreakdownItem('Vết nứt nhỏ', (1.0 - r.confidence) * 60, const Color(0xFFFFB347)),
-            _BreakdownItem('Không có nứt', (1.0 - r.confidence) * 40, const Color(0xFF22C55E)),
-          ]
-        : [
-            _BreakdownItem('Không có nứt', confidencePct, const Color(0xFF22C55E)),
-            _BreakdownItem('Vết nứt nhỏ', (1.0 - r.confidence) * 60, const Color(0xFFFFB347)),
-            _BreakdownItem('Vết nứt lớn', (1.0 - r.confidence) * 40, const Color(0xFFEF4444)),
-          ];
+  Widget _buildBreakdownCard(ScanResultModel r, bool hasCrack) {
+    final breakdownItems = [
+      _BreakdownItem(
+          'Xác suất có vết nứt', r.probPositive * 100, const Color(0xFFEF4444)),
+      _BreakdownItem('Xác suất không nứt', (1.0 - r.probPositive) * 100,
+          const Color(0xFF22C55E)),
+    ];
 
     return AnimatedBuilder(
       animation: _animController,
@@ -365,7 +417,10 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
               boxShadow: const [
-                BoxShadow(color: Color(0x1AC85600), blurRadius: 16, offset: Offset(0, 4)),
+                BoxShadow(
+                    color: Color(0x1AC85600),
+                    blurRadius: 16,
+                    offset: Offset(0, 4)),
               ],
             ),
             child: Column(
@@ -390,11 +445,17 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                             children: [
                               Text(
                                 item.label,
-                                style: const TextStyle(color: Color(0xFF6B3A1F), fontSize: 11, fontWeight: FontWeight.w500),
+                                style: const TextStyle(
+                                    color: Color(0xFF6B3A1F),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500),
                               ),
                               Text(
                                 '${item.value.toStringAsFixed(1)}%',
-                                style: TextStyle(color: item.color, fontSize: 11, fontWeight: FontWeight.w700),
+                                style: TextStyle(
+                                    color: item.color,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700),
                               ),
                             ],
                           ),
@@ -407,6 +468,32 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                         ],
                       ),
                     )),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF5EC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFFFE0C8)),
+                  ),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.info_outline_rounded,
+                          size: 16, color: Color(0xFFE8751A)),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Kết quả này được tính trực tiếp từ xác suất đầu ra của model. Vì model hiện tại là binary classifier, màn hình không vẽ hộp tọa độ giả.',
+                          style: TextStyle(
+                              color: Color(0xFF6B3A1F),
+                              fontSize: 11,
+                              height: 1.35),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -449,13 +536,17 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                 Icon(
                   hasCrack ? Icons.warning_rounded : Icons.check_circle_rounded,
                   size: 15,
-                  color: hasCrack ? const Color(0xFFEF4444) : const Color(0xFF22C55E),
+                  color: hasCrack
+                      ? const Color(0xFFEF4444)
+                      : const Color(0xFF22C55E),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   hasCrack ? 'CẦN XỬ LÝ NGAY' : 'KHUYẾN NGHỊ',
                   style: TextStyle(
-                    color: hasCrack ? const Color(0xFFEF4444) : const Color(0xFF22C55E),
+                    color: hasCrack
+                        ? const Color(0xFFEF4444)
+                        : const Color(0xFF22C55E),
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.5,
@@ -474,13 +565,18 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                         height: 16,
                         margin: const EdgeInsets.only(top: 1),
                         decoration: BoxDecoration(
-                          color: hasCrack ? const Color(0xFFEF4444) : const Color(0xFF22C55E),
+                          color: hasCrack
+                              ? const Color(0xFFEF4444)
+                              : const Color(0xFF22C55E),
                           shape: BoxShape.circle,
                         ),
                         child: Center(
                           child: Text(
                             '${e.key + 1}',
-                            style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 8,
+                                fontWeight: FontWeight.w700),
                           ),
                         ),
                       ),
@@ -488,7 +584,8 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                       Expanded(
                         child: Text(
                           e.value,
-                          style: const TextStyle(color: Color(0xFF7F1D1D), fontSize: 11),
+                          style: const TextStyle(
+                              color: Color(0xFF7F1D1D), fontSize: 11),
                         ),
                       ),
                     ],
@@ -512,12 +609,14 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                 context.go(AppRoutes.scanner);
               },
               icon: const Icon(Icons.refresh_rounded, size: 16),
-              label: const Text('Quét lại', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+              label: const Text('Quét lại',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFFE8751A),
                 side: const BorderSide(color: Color(0xFFE8751A), width: 2),
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
               ),
             ),
           ),
@@ -530,19 +629,25 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                 ),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: const [
-                  BoxShadow(color: Color(0x72C85600), blurRadius: 20, offset: Offset(0, 6)),
+                  BoxShadow(
+                      color: Color(0x72C85600),
+                      blurRadius: 20,
+                      offset: Offset(0, 6)),
                 ],
               ),
               child: ElevatedButton.icon(
                 onPressed: () => context.go(AppRoutes.history),
                 icon: const Icon(Icons.save_alt_rounded, size: 16),
-                label: const Text('Lưu & Xem', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                label: const Text('Lưu & Xem',
+                    style:
+                        TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
                 ),
               ),
             ),
@@ -552,15 +657,14 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
     );
   }
 
-  String _formatDate(DateTime dt) =>
-      '${dt.day.toString().padLeft(2, '0')}/'
+  String _formatDate(DateTime dt) => '${dt.day.toString().padLeft(2, '0')}/'
       '${dt.month.toString().padLeft(2, '0')}/'
       '${dt.year} · '
       '${dt.hour.toString().padLeft(2, '0')}:'
       '${dt.minute.toString().padLeft(2, '0')}';
 }
 
-// ── Helpers ──────────────────────────────────────────────────
+// Helpers
 
 class _CircleBtn extends StatelessWidget {
   final VoidCallback onTap;
@@ -584,53 +688,24 @@ class _CircleBtn extends StatelessWidget {
   }
 }
 
-class _DetectionBox extends StatelessWidget {
-  final double width, height;
-  final Color borderColor, labelBg;
+class _InfoChip extends StatelessWidget {
   final String label;
-  const _DetectionBox({
-    required this.width,
-    required this.height,
-    required this.borderColor,
-    required this.labelBg,
-    required this.label,
-  });
+  final Color color;
+  const _InfoChip({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      height: height,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            width: width,
-            height: height,
-            decoration: BoxDecoration(
-              border: Border.all(color: borderColor, width: 2),
-              borderRadius: BorderRadius.circular(4),
-              boxShadow: [
-                BoxShadow(color: borderColor.withValues(alpha: 0.5), blurRadius: 12),
-              ],
-            ),
-          ),
-          Positioned(
-            top: -18,
-            left: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: labelBg,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                label,
-                style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
-              ),
-            ),
-          ),
-        ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.42),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        label,
+        style:
+            TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -640,7 +715,8 @@ class _AnimatedBar extends StatelessWidget {
   final double value;
   final Color color;
   final Animation<double> animation;
-  const _AnimatedBar({required this.value, required this.color, required this.animation});
+  const _AnimatedBar(
+      {required this.value, required this.color, required this.animation});
 
   @override
   Widget build(BuildContext context) {
@@ -677,7 +753,8 @@ class _AnimatedBar extends StatelessWidget {
 class _StatTile extends StatelessWidget {
   final IconData icon;
   final String label, value;
-  const _StatTile({required this.icon, required this.label, required this.value});
+  const _StatTile(
+      {required this.icon, required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -695,8 +772,14 @@ class _StatTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 9)),
-                Text(value, style: const TextStyle(color: Color(0xFF3D1A00), fontSize: 13, fontWeight: FontWeight.w700)),
+                Text(label,
+                    style:
+                        const TextStyle(color: Color(0xFF9CA3AF), fontSize: 9)),
+                Text(value,
+                    style: const TextStyle(
+                        color: Color(0xFF3D1A00),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700)),
               ],
             ),
           ),

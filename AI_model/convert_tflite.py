@@ -67,7 +67,7 @@ print(f"[OK]   Copied → {MOBILE_ASSET}")
 # ── Verify: Keras vs TFLite ───────────────────────────────────
 # Dùng ai_edge_litert thay tf.lite.Interpreter (deprecated từ TF 2.20+)
 print("\n[INFO] Verifying...")
-dummy = np.random.rand(1, 224, 224, 3).astype(np.float32)
+dummy = (np.random.rand(1, 224, 224, 3) * 255.0).astype(np.float32)
 
 keras_out = float(model.predict(dummy, verbose=0)[0][0])
 

@@ -136,7 +136,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   textInputAction: TextInputAction.next,
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Vui lòng nhập mật khẩu.';
-                    if (v.length < 6) return 'Mật khẩu tối thiểu 6 ký tự.';
+                    if (v.length < 8) return 'Mật khẩu tối thiểu 8 ký tự.';
                     return null;
                   },
                 ),

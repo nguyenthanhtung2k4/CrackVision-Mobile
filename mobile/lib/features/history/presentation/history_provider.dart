@@ -15,7 +15,10 @@ class HistoryState {
     this.error,
   });
 
-  HistoryState copyWith({HistoryStatus? status, List<ScanResultModel>? items, String? error}) =>
+  HistoryState copyWith(
+          {HistoryStatus? status,
+          List<ScanResultModel>? items,
+          String? error}) =>
       HistoryState(
         status: status ?? this.status,
         items: items ?? this.items,
@@ -41,11 +44,24 @@ class HistoryNotifier extends StateNotifier<HistoryState> {
   Future<void> delete(String id) async {
     try {
       await _repo.deleteHistory(id);
-      state = state.copyWith(items: state.items.where((i) => i.id != id).toList());
+      state =
+          state.copyWith(items: state.items.where((i) => i.id != id).toList());
     } catch (_) {}
+  }
+
+  Future<void> clearAll() async {
+    state = state.copyWith(status: HistoryStatus.loading);
+    try {
+      await _repo.clearHistory();
+      state = state.copyWith(status: HistoryStatus.success, items: const []);
+    } catch (e) {
+      state = state.copyWith(status: HistoryStatus.error, error: e.toString());
+      rethrow;
+    }
   }
 }
 
-final historyProvider = StateNotifierProvider<HistoryNotifier, HistoryState>((ref) {
+final historyProvider =
+    StateNotifierProvider<HistoryNotifier, HistoryState>((ref) {
   return HistoryNotifier(ref.watch(historyRepositoryProvider));
 });

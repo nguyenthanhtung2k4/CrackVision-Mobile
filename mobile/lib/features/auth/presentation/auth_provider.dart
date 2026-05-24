@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:crackvision/core/network/api_client.dart';
 import 'package:crackvision/features/auth/data/auth_repository.dart';
 import 'package:crackvision/features/auth/domain/user_model.dart';
 
@@ -23,7 +24,14 @@ class AuthState {
 class AuthNotifier extends StateNotifier<AuthState> {
   final AuthRepository _repo;
 
-  AuthNotifier(this._repo) : super(const AuthState());
+  AuthNotifier(this._repo) : super(const AuthState()) {
+    _init();
+    onForceLogout.listen((_) {
+      state = const AuthState(status: AuthStatus.unauthenticated);
+    });
+  }
+
+  Future<void> _init() => checkAuth();
 
   Future<void> login(String email, String password) async {
     state = state.copyWith(status: AuthStatus.loading, error: null);
